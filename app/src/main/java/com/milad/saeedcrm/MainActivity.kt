@@ -10,6 +10,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -65,44 +66,109 @@ class MainActivity : Activity() {
         home()
     }
 
+    private fun rounded(color: Int, radius: Float, stroke: Int = 0): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = radius
+            if (stroke != 0) setStroke(1, stroke)
+        }
+
     private fun setup(title: String) {
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(18, 18, 18, 24)
+            setPadding(18, 18, 18, 28)
             layoutDirection = View.LAYOUT_DIRECTION_RTL
             setBackgroundColor(CREAM)
         }
         val scroll = ScrollView(this)
         scroll.addView(root)
         setContentView(scroll)
+
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(16, 18, 16, 18)
+            background = rounded(GREEN, 22f)
+        }
+        val logo = ImageView(this).apply {
+            setImageResource(R.drawable.ic_baharloo)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }
+        header.addView(logo, LinearLayout.LayoutParams(64, 64))
+        val brand = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(12, 0, 0, 0)
+        }
+        brand.addView(TextView(this).apply {
+            text = "بهارلو"
+            textSize = 25f
+            setTextColor(CREAM)
+            typeface = Typeface.DEFAULT_BOLD
+        })
+        brand.addView(TextView(this).apply {
+            text = "BAHARLOO  •  مدیریت کارگاه بادام"
+            textSize = 11f
+            setTextColor(0xFFE6D8B8.toInt())
+        })
+        header.addView(brand, LinearLayout.LayoutParams(0, -2, 1f))
+        root.addView(header)
         root.addView(TextView(this).apply {
-            text = "بهارلو | BAHARLOO\n$title"
-            textSize = 22f
+            text = title
+            textSize = 20f
             setTextColor(GREEN)
             typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setPadding(8, 20, 8, 24)
+            gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+            setPadding(4, 22, 4, 12)
         })
     }
 
     private fun label(value: String) {
-        root.addView(TextView(this).apply {
+        val card = TextView(this).apply {
             text = value
             textSize = 15f
             setTextColor(INK)
             typeface = Typeface.DEFAULT_BOLD
-            setPadding(4, 9, 4, 5)
-        })
+            gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+            setPadding(16, 14, 16, 14)
+            background = rounded(Color.WHITE, 16f, 0xFFE6DFC9.toInt())
+        }
+        val lp = LinearLayout.LayoutParams(-1, -2)
+        lp.bottomMargin = 8
+        root.addView(card, lp)
     }
 
     private fun button(value: String, action: () -> Unit) {
-        root.addView(Button(this).apply {
-            text = value
-            textSize = 15f
-            setTextColor(Color.WHITE)
-            setBackgroundTintList(android.content.res.ColorStateList.valueOf(GREEN))
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(18, 15, 18, 15)
+            background = rounded(Color.WHITE, 17f, 0xFFE3D9BE.toInt())
+            isClickable = true
+            isFocusable = true
             setOnClickListener { action() }
+        }
+        val marker = TextView(this).apply {
+            text = "◆"
+            textSize = 15f
+            setTextColor(GOLD)
+            gravity = Gravity.CENTER
+        }
+        card.addView(marker, LinearLayout.LayoutParams(30, -2))
+        card.addView(TextView(this).apply {
+            text = value
+            textSize = 16f
+            setTextColor(GREEN)
+            typeface = Typeface.DEFAULT_BOLD
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        card.addView(TextView(this).apply {
+            text = "‹"
+            textSize = 25f
+            setTextColor(GOLD)
         })
+        val lp = LinearLayout.LayoutParams(-1, -2)
+        lp.bottomMargin = 10
+        root.addView(card, lp)
     }
 
     private fun input(hint: String, numeric: Boolean = false, value: String = ""): EditText {
@@ -110,26 +176,27 @@ class MainActivity : Activity() {
             this.hint = hint
             setText(value)
             textSize = 16f
+            setTextColor(INK)
+            setHintTextColor(0xFF9A9A90.toInt())
             setSingleLine(hint != "توضیحات")
-            setPadding(12, 8, 12, 8)
-            setBackgroundColor(Color.WHITE)
+            setPadding(14, 12, 14, 12)
+            background = rounded(Color.WHITE, 14f, 0xFFE3D9BE.toInt())
             if (numeric) inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
-        root.addView(e)
+        val lp = LinearLayout.LayoutParams(-1, -2)
+        lp.bottomMargin = 10
+        root.addView(e, lp)
         return e
     }
 
     private fun home() {
-        setup("مدیریت کارگاه بسته‌بندی بادام")
-        label("داشبورد مدیریتی")
+        setup("داشبورد مدیریتی")
         val c = db.readableDatabase.rawQuery(
             "SELECT COUNT(*), COALESCE(SUM(CAST(REPLACE(product_kil, ',', '.') AS REAL)),0) FROM records", null)
         var count = 0
         var kilos = 0.0
         if (c.moveToFirst()) { count = c.getInt(0); kilos = c.getDouble(1) }
         c.close()
-        label("تعداد کل سوابق: " + count)
-        label("مجموع کیل محصول: " + String.format(Locale.US, "%.2f", kilos))
         val now = Calendar.getInstance()
         val jalaliToday = gregorianToJalali(now.get(Calendar.YEAR), now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH))
         val today = String.format(Locale.US, "%04d/%02d/%02d", jalaliToday[0], jalaliToday[1], jalaliToday[2])
@@ -140,7 +207,34 @@ class MainActivity : Activity() {
         val m = db.readableDatabase.rawQuery("SELECT COUNT(*) FROM records WHERE date LIKE ?", arrayOf(month + "%"))
         val monthCount = if (m.moveToFirst()) m.getInt(0) else 0
         m.close()
-        label("ثبت‌های امروز: " + todayCount + "     |     ثبت‌های این ماه: " + monthCount)
+
+        val stats = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(14, 14, 14, 14)
+            background = rounded(0xFFE9E5D8.toInt(), 20f)
+        }
+        fun statLine(caption: String, value: String) {
+            stats.addView(TextView(this).apply {
+                text = caption
+                textSize = 13f
+                setTextColor(0xFF647066.toInt())
+            })
+            stats.addView(TextView(this).apply {
+                text = value
+                textSize = 23f
+                setTextColor(GREEN)
+                typeface = Typeface.DEFAULT_BOLD
+                setPadding(0, 2, 0, 12)
+            })
+        }
+        statLine("تعداد کل سوابق", count.toString())
+        statLine("مجموع کیل محصول", String.format(Locale.US, "%.2f", kilos))
+        statLine("ثبت‌های امروز  |  این ماه", "$todayCount  |  $monthCount")
+        val statsLp = LinearLayout.LayoutParams(-1, -2)
+        statsLp.bottomMargin = 18
+        root.addView(stats, statsLp)
+
+        label("مدیریت کارگاه")
         button("ثبت اطلاعات جدید") { form() }
         button("جستجوی پیشرفته") { advancedSearch() }
         button("مشاهده تمام سوابق") { showRecords(null) }
@@ -148,6 +242,13 @@ class MainActivity : Activity() {
         button("انتقال اطلاعات از نسخه قبلی") { importLegacyCsv() }
         button("پشتیبان‌گیری از اطلاعات") { backup() }
         button("بازیابی نسخه پشتیبان") { restore() }
+        root.addView(TextView(this).apply {
+            text = "BAHARLOO  •  نسخه ۲"
+            textSize = 11f
+            setTextColor(0xFF8B927F.toInt())
+            gravity = Gravity.CENTER
+            setPadding(8, 18, 8, 4)
+        })
     }
 
     private fun form(recordId: Long? = null) {
