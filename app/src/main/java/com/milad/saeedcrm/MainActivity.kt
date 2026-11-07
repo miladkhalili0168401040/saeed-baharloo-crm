@@ -130,7 +130,9 @@ class MainActivity : Activity() {
         c.close()
         label("تعداد کل سوابق: " + count)
         label("مجموع کیل محصول: " + String.format(Locale.US, "%.2f", kilos))
-        val today = java.text.SimpleDateFormat("yyyy/MM/dd", Locale.US).format(java.util.Date())
+        val now = Calendar.getInstance()
+        val jalaliToday = gregorianToJalali(now.get(Calendar.YEAR), now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH))
+        val today = String.format(Locale.US, "%04d/%02d/%02d", jalaliToday[0], jalaliToday[1], jalaliToday[2])
         val month = today.substring(0, 7)
         val d = db.readableDatabase.rawQuery("SELECT COUNT(*) FROM records WHERE date=?", arrayOf(today))
         val todayCount = if (d.moveToFirst()) d.getInt(0) else 0
@@ -168,12 +170,9 @@ class MainActivity : Activity() {
             val e = input(name, i == 3 || i == 4 || i == 6, oldValues[i])
             if (i == 1) {
                 e.isFocusable = false
-                e.setOnClickListener {
-                    val cal = Calendar.getInstance()
-                    DatePickerDialog(this, { _, year, month, day ->
-                        e.setText(String.format(Locale.US, "%04d/%02d/%02d", year, month + 1, day))
-                    }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
-                }
+                e.isClickable = true
+                e.hint = "سال/ماه/روز شمسی"
+                e.setOnClickListener { showJalaliDatePicker(e) }
             }
             if (i == 8) {
                 e.setSingleLine(false)
@@ -195,6 +194,79 @@ class MainActivity : Activity() {
             home()
         }
         button("بازگشت") { home() }
+    }
+
+    // Jalali (Shamsi) date conversion helpers
+    private fun gregorianToJalali(gy0: Int, gm: Int, gd: Int): IntArray {
+        val gdm = intArrayOf(0,31, if (isLeapGregorian(gy0)) 29 else 28,31,30,31,30,31,31,30,31,30,31)
+        var gy = gy0
+        var days = 355666 + 365 * gy + (gy + 3) / 4 - (gy + 99) / 100 + (gy + 399) / 400 + gd
+        for (i in 0 until gm) days += gdm[i]
+        var jy = -1595 + 33 * (days / 12053)
+        days %= 12053
+        jy += 4 * (days / 1461)
+        days %= 1461
+        if (days > 365) { jy += (days - 1) / 365; days = (days - 1) % 365 }
+        val jm: Int
+        val jd: Int
+        if (days < 186) { jm = 1 + days / 31; jd = 1 + days % 31 }
+        else { jm = 7 + (days - 186) / 30; jd = 1 + (days - 186) % 30 }
+        return intArrayOf(jy, jm, jd)
+    }
+
+    private fun isLeapGregorian(y: Int): Boolean =
+        y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)
+
+    private fun showJalaliDatePicker(target: EditText) {
+        val now = Calendar.getInstance()
+        val today = gregorianToJalali(now.get(Calendar.YEAR), now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH))
+        val parts = target.text.toString().split("/")
+        val year = parts.getOrNull(0)?.toIntOrNull() ?: today[0]
+        val month = parts.getOrNull(1)?.toIntOrNull() ?: today[1]
+        val day = parts.getOrNull(2)?.toIntOrNull() ?: today[2]
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(16, 8, 16, 8)
+        }
+        fun picker(value: Int, min: Int, max: Int): NumberPicker =
+            NumberPicker(this).apply { this.minValue = min; this.maxValue = max; this.value = value.coerceIn(min, max); wrapSelectorWheel = false }
+        val py = picker(year, 1300, 1500)
+        val pm = picker(month, 1, 12)
+        val pd = picker(day, 1, 31)
+        box.addView(py, LinearLayout.LayoutParams(0, -2, 1f))
+        box.addView(pm, LinearLayout.LayoutParams(0, -2, 1f))
+        box.addView(pd, LinearLayout.LayoutParams(0, -2, 1f))
+        pm.setOnValueChangedListener { _, _, newMonth ->
+            pd.maxValue = if (newMonth <= 6) 31 else if (newMonth <= 11) 30 else if (isLeapJalali(py.value)) 30 else 29
+        }
+        py.setOnValueChangedListener { _, _, _ ->
+            if (pm.value == 12) pd.maxValue = if (isLeapJalali(py.value)) 30 else 29
+        }
+        AlertDialog.Builder(this)
+            .setTitle("انتخاب تاریخ شمسی")
+            .setView(box)
+            .setNegativeButton("انصراف", null)
+            .setPositiveButton("تأیید") { _, _ ->
+                target.setText(String.format(Locale.US, "%04d/%02d/%02d", py.value, pm.value, pd.value))
+            }.show()
+    }
+
+    private fun isLeapJalali(year: Int): Boolean {
+        val breaks = intArrayOf(-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178)
+        var jp = breaks[0]
+        var jump = 0
+        for (i in 1 until breaks.size) {
+            val jm = breaks[i]
+            jump = jm - jp
+            if (year < jm) break
+            jp = jm
+        }
+        var n = year - jp
+        if (jump - n < 6) n = n - jump + ((jump + 4) / 33) * 33
+        var leap = (((n + 1) % 33) - 1) % 4
+        if (leap == -1) leap = 4
+        return leap == 0
     }
 
     private fun advancedSearch() {
