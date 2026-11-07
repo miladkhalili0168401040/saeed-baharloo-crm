@@ -219,76 +219,70 @@ class MainActivity : Activity() {
         return e
     }
 
+
+
+    private fun sectionTitle(value: String, subtitle: String = "") {
+        val wrap = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(2, 18, 2, 9) }
+        wrap.addView(TextView(this).apply { text=value; textSize=16f; setTextColor(GREEN); typeface=Typeface.DEFAULT_BOLD })
+        if (subtitle.isNotBlank()) wrap.addView(TextView(this).apply { text=subtitle; textSize=11f; setTextColor(0xFF858B7D.toInt()); setPadding(0,3,0,0) })
+        root.addView(wrap)
+    }
+
+    private fun dashboardPair(
+        first: Triple<String, String, () -> Unit>, second: Triple<String, String, () -> Unit>,
+        firstIcon: String, secondIcon: String, firstPrimary: Boolean = false
+    ) {
+        val row = LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; layoutDirection=View.LAYOUT_DIRECTION_RTL }
+        fun tile(title:String, subtitle:String, icon:String, action:()->Unit, primary:Boolean) {
+            val v=LinearLayout(this).apply {
+                orientation=LinearLayout.VERTICAL; gravity=Gravity.RIGHT; setPadding(14,14,14,14)
+                background=if(primary) premiumGradient(0xFF17613D.toInt(),0xFF103A2A.toInt(),20f,GOLD) else rounded(Color.WHITE,20f,0xFFE4DCCB.toInt())
+                elevation=3f; isClickable=true; isFocusable=true; setOnClickListener { action() }
+            }
+            v.addView(TextView(this).apply { text=icon; textSize=23f; setTextColor(if(primary) 0xFFFFE5A5.toInt() else GREEN); background=rounded(if(primary) 0x33FFFFFF else 0xFFEAF0E7.toInt(),13f); gravity=Gravity.CENTER; setPadding(8,6,8,6) },LinearLayout.LayoutParams(44,42))
+            v.addView(TextView(this).apply { text=title; textSize=13.5f; setTextColor(if(primary) CREAM else GREEN); typeface=Typeface.DEFAULT_BOLD; setPadding(0,11,0,3) })
+            v.addView(TextView(this).apply { text=subtitle; textSize=10f; setTextColor(if(primary) 0xFFD9E5D9.toInt() else 0xFF858B7D.toInt()) })
+            v.minimumHeight=116
+            val lp=LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(4,4,4,9); row.addView(v,lp)
+        }
+        tile(first.first,first.second,firstIcon,first.third,firstPrimary)
+        tile(second.first,second.second,secondIcon,second.third,false)
+        root.addView(row)
+    }
+
     private fun home() {
-        setup("داشبورد مدیریتی")
-        val c = db.readableDatabase.rawQuery(
-            "SELECT COUNT(*), COALESCE(SUM(CAST(REPLACE(product_kil, ',', '.') AS REAL)),0) FROM records", null)
-        var count = 0
-        var kilos = 0.0
-        if (c.moveToFirst()) { count = c.getInt(0); kilos = c.getDouble(1) }
-        c.close()
-        val now = Calendar.getInstance()
-        val jalaliToday = gregorianToJalali(now.get(Calendar.YEAR), now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH))
-        val today = String.format(Locale.US, "%04d/%02d/%02d", jalaliToday[0], jalaliToday[1], jalaliToday[2])
-        val month = today.substring(0, 7)
-        val d = db.readableDatabase.rawQuery("SELECT COUNT(*) FROM records WHERE date=?", arrayOf(today))
-        val todayCount = if (d.moveToFirst()) d.getInt(0) else 0
-        d.close()
-        val m = db.readableDatabase.rawQuery("SELECT COUNT(*) FROM records WHERE date LIKE ?", arrayOf(month + "%"))
-        val monthCount = if (m.moveToFirst()) m.getInt(0) else 0
-        m.close()
-
-        val stats = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(20, 20, 20, 20)
-            background = premiumGradient(0xFF17613D.toInt(), 0xFF102F25.toInt(), 24f, GOLD)
-            elevation = 5f
+        setup("داشبورد کارگاه")
+        val c=db.readableDatabase.rawQuery("SELECT COUNT(*), COALESCE(SUM(CAST(REPLACE(product_kil, ',', '.') AS REAL)),0) FROM records",null)
+        var count=0; var kilos=0.0
+        if(c.moveToFirst()){count=c.getInt(0);kilos=c.getDouble(1)}; c.close()
+        val now=Calendar.getInstance()
+        val j=gregorianToJalali(now.get(Calendar.YEAR),now.get(Calendar.MONTH)+1,now.get(Calendar.DAY_OF_MONTH))
+        val today=String.format(Locale.US,"%04d/%02d/%02d",j[0],j[1],j[2]); val month=today.substring(0,7)
+        val d=db.readableDatabase.rawQuery("SELECT COUNT(*) FROM records WHERE date=?",arrayOf(today))
+        val todayCount=if(d.moveToFirst()) d.getInt(0) else 0; d.close()
+        val m=db.readableDatabase.rawQuery("SELECT COUNT(*) FROM records WHERE date LIKE ?",arrayOf(month+"%"))
+        val monthCount=if(m.moveToFirst()) m.getInt(0) else 0; m.close()
+        val welcome=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(20,20,20,20); background=premiumGradient(0xFF1D6845.toInt(),0xFF102F25.toInt(),24f,GOLD); elevation=5f }
+        welcome.addView(TextView(this).apply { text="به فضای مدیریت بهارلو خوش آمدید"; textSize=18f; setTextColor(CREAM); typeface=Typeface.DEFAULT_BOLD })
+        welcome.addView(TextView(this).apply { text="مدیریت هوشمند اطلاعات و سوابق کارگاه"; textSize=11f; setTextColor(0xFFE2D8C0.toInt()); setPadding(0,5,0,15) })
+        val metrics=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; layoutDirection=View.LAYOUT_DIRECTION_RTL }
+        fun metric(caption:String,value:String) {
+            val card=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(11,11,11,11); background=rounded(0x24FFFFFF,14f,0x55E6D8B8) }
+            card.addView(TextView(this).apply { text=value; textSize=21f; setTextColor(CREAM); typeface=Typeface.DEFAULT_BOLD })
+            card.addView(TextView(this).apply { text=caption; textSize=10f; setTextColor(0xFFE6D8B8.toInt()); setPadding(0,3,0,0) })
+            val lp=LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(3,0,3,0); metrics.addView(card,lp)
         }
-        fun statLine(caption: String, value: String) {
-            stats.addView(TextView(this).apply {
-                text = caption
-                textSize = 13f
-                setTextColor(0xFFE7DCC2.toInt())
-            })
-            stats.addView(TextView(this).apply {
-                text = value
-                textSize = 23f
-                setTextColor(CREAM)
-                typeface = Typeface.DEFAULT_BOLD
-                setPadding(0, 2, 0, 12)
-            })
-        }
-        statLine("تعداد کل سوابق", count.toString())
-        statLine("مجموع کیل محصول", String.format(Locale.US, "%.2f", kilos))
-        statLine("ثبت‌های امروز  |  این ماه", "$todayCount  |  $monthCount")
-        stats.addView(View(this).apply {
-            background = rounded(0x66E6D8B8, 2f)
-        }, LinearLayout.LayoutParams(-1, 2).apply { topMargin = 4; bottomMargin = 10 })
-        stats.addView(TextView(this).apply {
-            text = "✦   نمای کلی فعالیت کارگاه"
-            textSize = 12f
-            setTextColor(0xFFE6D8B8.toInt())
-            gravity = Gravity.RIGHT
-        })
-        val statsLp = LinearLayout.LayoutParams(-1, -2)
-        statsLp.bottomMargin = 18
-        root.addView(stats, statsLp)
-
-        label("مدیریت کارگاه")
-        button("ثبت اطلاعات جدید") { form() }
-        button("جستجوی پیشرفته") { advancedSearch() }
-        button("مشاهده تمام سوابق") { showRecords(null) }
-        button("خروجی Excel / CSV") { export() }
-        button("انتقال اطلاعات از نسخه قبلی") { importLegacyCsv() }
-        button("پشتیبان‌گیری از اطلاعات") { backup() }
-        button("بازیابی نسخه پشتیبان") { restore() }
-        root.addView(TextView(this).apply {
-            text = "BAHARLOO  •  نسخه ۲"
-            textSize = 11f
-            setTextColor(0xFF8B927F.toInt())
-            gravity = Gravity.CENTER
-            setPadding(8, 18, 8, 4)
-        })
+        metric("کل سوابق",count.toString()); metric("مجموع کیل",String.format(Locale.US,"%.1f",kilos)); welcome.addView(metrics)
+        welcome.addView(TextView(this).apply { text="امروز: $today     •     ثبت امروز: $todayCount     •     این ماه: $monthCount"; textSize=10.5f; setTextColor(0xFFE9E1D0.toInt()); gravity=Gravity.CENTER; setPadding(0,14,0,0) })
+        val wlp=LinearLayout.LayoutParams(-1,-2); wlp.bottomMargin=18; root.addView(welcome,wlp)
+        sectionTitle("عملیات اصلی","دسترسی سریع به بخش‌های پرکاربرد")
+        dashboardPair(Triple("ثبت اطلاعات","ایجاد پرونده جدید",{form()}),Triple("جستجوی پیشرفته","فیلتر و یافتن سوابق",{advancedSearch()}),"＋","⌕",true)
+        dashboardPair(Triple("مشاهده سوابق","بررسی و ویرایش پرونده‌ها",{showRecords(null)}),Triple("خروجی اطلاعات","دریافت فایل CSV",{export()}),"▤","⇩")
+        sectionTitle("ابزارهای مدیریتی","انتقال و نگهداری امن اطلاعات")
+        button("انتقال اطلاعات از نسخه قبلی"){importLegacyCsv()}
+        button("پشتیبان‌گیری از اطلاعات"){backup()}
+        button("بازیابی نسخه پشتیبان"){restore()}
+        root.addView(TextView(this).apply { text="BAHARLOO  •  نسخه ۲"; textSize=10f; setTextColor(0xFF929486.toInt()); gravity=Gravity.CENTER; setPadding(8,22,8,8) })
     }
 
     private fun form(recordId: Long? = null) {
