@@ -8,7 +8,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.milad.saeedcrm"
+        applicationId = "com.milad.baharloo"
         minSdk = 23
         targetSdk = 35
         versionCode = 2
