@@ -144,6 +144,7 @@ class MainActivity : Activity() {
         button("مشاهده تمام سوابق") { showRecords(null) }
         button("خروجی Excel / CSV") { export() }
         button("پشتیبان‌گیری از اطلاعات") { backup() }
+        button("بازیابی نسخه پشتیبان") { restore() }
     }
 
     private fun form(recordId: Long? = null) {
@@ -284,35 +285,78 @@ class MainActivity : Activity() {
     }
 
     private fun backup() {
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/octet-stream"
-            putExtra(Intent.EXTRA_TITLE, "Baharloo-Backup.db")
+        try {
+            db.writableDatabase.rawQuery("PRAGMA wal_checkpoint(FULL)", null).close()
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/octet-stream"
+                putExtra(Intent.EXTRA_TITLE, "Baharloo-Backup.db")
+            }
+            startActivityForResult(intent, 101)
+        } catch (e: Exception) {
+            Toast.makeText(this, "آماده‌سازی پشتیبان ناموفق بود: " + e.message, Toast.LENGTH_LONG).show()
         }
-        startActivityForResult(intent, 101)
+    }
+
+    private fun restore() {
+        AlertDialog.Builder(this)
+            .setTitle("بازیابی اطلاعات")
+            .setMessage("با بازیابی، اطلاعات فعلی برنامه با اطلاعات فایل پشتیبان جایگزین می‌شود. قبل از ادامه از اطلاعات فعلی پشتیبان بگیرید. ادامه می‌دهید؟")
+            .setNegativeButton("انصراف", null)
+            .setPositiveButton("انتخاب فایل پشتیبان") { _, _ ->
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                startActivityForResult(intent, 102)
+            }.show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == RESULT_OK && data?.data != null) {
-            try {
-                if (requestCode == 100) {
+        if (resultCode != RESULT_OK || data?.data == null) return
+        try {
+            when (requestCode) {
+                100 -> {
                     contentResolver.openOutputStream(data.data!!)?.use {
                         it.write(("\uFEFF" + pendingCsv).toByteArray(Charsets.UTF_8))
                     }
-                } else if (requestCode == 101) {
+                    Toast.makeText(this, "فایل CSV ذخیره شد", Toast.LENGTH_LONG).show()
+                }
+                101 -> {
                     val source = getDatabasePath("saeed_crm.db")
-                    db.close()
+                    db.writableDatabase.rawQuery("PRAGMA wal_checkpoint(FULL)", null).close()
                     source.inputStream().use { input ->
                         contentResolver.openOutputStream(data.data!!)?.use { output -> input.copyTo(output) }
                     }
-                    db = DBHelper(this)
+                    Toast.makeText(this, "نسخه پشتیبان ذخیره شد", Toast.LENGTH_LONG).show()
                 }
-                Toast.makeText(this, "فایل با موفقیت ذخیره شد", Toast.LENGTH_LONG).show()
-            } catch (e: Exception) {
-                db = DBHelper(this)
-                Toast.makeText(this, "خطا: " + e.message, Toast.LENGTH_LONG).show()
+                102 -> {
+                    val temp = java.io.File(cacheDir, "baharloo-restore.db")
+                    contentResolver.openInputStream(data.data!!)?.use { input ->
+                        temp.outputStream().use { output -> input.copyTo(output) }
+                    } ?: throw IllegalStateException("فایل انتخاب‌شده قابل خواندن نیست")
+                    val check = SQLiteDatabase.openDatabase(temp.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+                    val valid = check.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='records'", null)
+                    val hasRecords = valid.moveToFirst()
+                    valid.close()
+                    check.close()
+                    if (!hasRecords) throw IllegalArgumentException("این فایل، پشتیبان معتبر بهارلو نیست")
+                    db.close()
+                    val target = getDatabasePath("saeed_crm.db")
+                    java.io.File(target.path + "-wal").delete()
+                    java.io.File(target.path + "-shm").delete()
+                    temp.copyTo(target, overwrite = true)
+                    temp.delete()
+                    db = DBHelper(this)
+                    db.readableDatabase
+                    Toast.makeText(this, "بازیابی انجام شد", Toast.LENGTH_LONG).show()
+                    home()
+                }
             }
+        } catch (e: Exception) {
+            db = DBHelper(this)
+            Toast.makeText(this, "عملیات ناموفق بود: " + e.message, Toast.LENGTH_LONG).show()
         }
     }
 }
