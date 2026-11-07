@@ -73,6 +73,26 @@ class MainActivity : Activity() {
             if (stroke != 0) setStroke(1, stroke)
         }
 
+    private fun premiumGradient(top: Int, bottom: Int, radius: Float, stroke: Int = 0): GradientDrawable =
+        GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(top, bottom)).apply {
+            cornerRadius = radius
+            if (stroke != 0) setStroke(2, stroke)
+        }
+
+    private fun visualIcon(value: String): String = when {
+        value.contains("ثبت") -> "✚"
+        value.contains("جستجو") -> "⌕"
+        value.contains("سوابق") -> "▤"
+        value.contains("Excel") || value.contains("CSV") -> "▦"
+        value.contains("انتقال") -> "⇧"
+        value.contains("پشتیبان‌گیری") -> "☁"
+        value.contains("بازیابی") -> "⤓"
+        value.contains("ذخیره") -> "✓"
+        value.contains("فیلتر") -> "⌕"
+        value.contains("بازگشت") -> "‹"
+        else -> "◆"
+    }
+
     private fun setup(title: String) {
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -88,7 +108,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(16, 18, 16, 18)
-            background = rounded(GREEN, 22f)
+            background = premiumGradient(0xFF17613D.toInt(), GREEN, 24f, GOLD)
         }
         val logo = ImageView(this).apply {
             setImageResource(R.drawable.ic_baharloo)
@@ -115,11 +135,11 @@ class MainActivity : Activity() {
         root.addView(header)
         root.addView(TextView(this).apply {
             text = title
-            textSize = 20f
+            textSize = 21f
             setTextColor(GREEN)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
-            setPadding(4, 22, 4, 12)
+            setPadding(4, 24, 4, 14)
         })
     }
 
@@ -149,24 +169,28 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(18, 17, 18, 17)
-            background = rounded(if (primary) GREEN else Color.WHITE, 18f,
-                if (primary) GOLD else 0xFFE3D9BE.toInt())
-            elevation = 2f
+            background = if (primary)
+                premiumGradient(0xFF168044.toInt(), 0xFF07552F.toInt(), 19f, GOLD)
+            else rounded(Color.WHITE, 19f, 0xFFE0D3B1.toInt())
+            elevation = if (primary) 5f else 3f
             isClickable = true
             isFocusable = true
             setOnClickListener { action() }
         }
         card.addView(TextView(this).apply {
-            text = if (primary) "✓" else "◆"
-            textSize = 17f
-            setTextColor(GOLD)
+            text = visualIcon(value)
+            textSize = 23f
+            setTextColor(if (primary) 0xFFFFE6A8.toInt() else 0xFF168044.toInt())
             gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(30, -2))
+            background = rounded(if (primary) 0x33000000 else 0xFFEAF2E8.toInt(), 13f)
+            setPadding(5, 4, 5, 4)
+        }, LinearLayout.LayoutParams(42, 42))
         card.addView(TextView(this).apply {
             text = value
-            textSize = 15f
+            textSize = 15.5f
             setTextColor(if (primary) CREAM else GREEN)
             typeface = Typeface.DEFAULT_BOLD
+            setPadding(12, 0, 0, 0)
         }, LinearLayout.LayoutParams(0, -2, 1f))
         if (!primary) card.addView(TextView(this).apply {
             text = "‹"; textSize = 24f; setTextColor(GOLD)
@@ -185,8 +209,8 @@ class MainActivity : Activity() {
             setHintTextColor(0xFF9A9A90.toInt())
             setSingleLine(hint != "توضیحات")
             setPadding(16, 14, 16, 14)
-            background = rounded(Color.WHITE, 13f, 0xFFD9D0B9.toInt())
-            elevation = 1.5f
+            background = rounded(Color.WHITE, 15f, 0xFFE2D8C3.toInt())
+            elevation = 2f
             if (numeric) inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
         val lp = LinearLayout.LayoutParams(-1, -2)
@@ -216,9 +240,9 @@ class MainActivity : Activity() {
 
         val stats = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(18, 18, 18, 18)
-            background = rounded(GREEN, 22f, GOLD)
-            elevation = 3f
+            setPadding(20, 20, 20, 20)
+            background = premiumGradient(0xFF17613D.toInt(), 0xFF102F25.toInt(), 24f, GOLD)
+            elevation = 5f
         }
         fun statLine(caption: String, value: String) {
             stats.addView(TextView(this).apply {
@@ -237,6 +261,15 @@ class MainActivity : Activity() {
         statLine("تعداد کل سوابق", count.toString())
         statLine("مجموع کیل محصول", String.format(Locale.US, "%.2f", kilos))
         statLine("ثبت‌های امروز  |  این ماه", "$todayCount  |  $monthCount")
+        stats.addView(View(this).apply {
+            background = rounded(0x66E6D8B8, 2f)
+        }, LinearLayout.LayoutParams(-1, 2).apply { topMargin = 4; bottomMargin = 10 })
+        stats.addView(TextView(this).apply {
+            text = "✦   نمای کلی فعالیت کارگاه"
+            textSize = 12f
+            setTextColor(0xFFE6D8B8.toInt())
+            gravity = Gravity.RIGHT
+        })
         val statsLp = LinearLayout.LayoutParams(-1, -2)
         statsLp.bottomMargin = 18
         root.addView(stats, statsLp)
