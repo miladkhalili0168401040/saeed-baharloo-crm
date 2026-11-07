@@ -143,6 +143,7 @@ class MainActivity : Activity() {
         button("جستجوی پیشرفته") { advancedSearch() }
         button("مشاهده تمام سوابق") { showRecords(null) }
         button("خروجی Excel / CSV") { export() }
+        button("انتقال اطلاعات از نسخه قبلی") { importLegacyCsv() }
         button("پشتیبان‌گیری از اطلاعات") { backup() }
         button("بازیابی نسخه پشتیبان") { restore() }
     }
@@ -298,6 +299,42 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun importLegacyCsv() {
+        AlertDialog.Builder(this)
+            .setTitle("انتقال اطلاعات نسخه قبلی")
+            .setMessage("ابتدا در برنامه قدیمی بهارلو/CRM از بخش خروجی CSV فایل سوابق را تهیه کنید؛ سپس آن فایل را اینجا انتخاب کنید.")
+            .setNegativeButton("انصراف", null)
+            .setPositiveButton("انتخاب فایل CSV") { _, _ ->
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                startActivityForResult(intent, 103)
+            }.show()
+    }
+
+    private fun parseCsvLine(line: String): List<String> {
+        val values = mutableListOf<String>()
+        val cell = StringBuilder()
+        var quoted = false
+        var i = 0
+        while (i < line.length) {
+            val ch = line[i]
+            if (ch == '"' && quoted && i + 1 < line.length && line[i + 1] == '"') {
+                cell.append('"'); i++
+            } else if (ch == '"') {
+                quoted = !quoted
+            } else if (ch == ',' && !quoted) {
+                values.add(cell.toString()); cell.setLength(0)
+            } else {
+                cell.append(ch)
+            }
+            i++
+        }
+        values.add(cell.toString())
+        return values
+    }
+
     private fun restore() {
         AlertDialog.Builder(this)
             .setTitle("بازیابی اطلاعات")
@@ -330,6 +367,41 @@ class MainActivity : Activity() {
                         contentResolver.openOutputStream(data.data!!)?.use { output -> input.copyTo(output) }
                     }
                     Toast.makeText(this, "نسخه پشتیبان ذخیره شد", Toast.LENGTH_LONG).show()
+                }
+                103 -> {
+                    val csvText = contentResolver.openInputStream(data.data!!)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                        ?: throw IllegalStateException("فایل CSV قابل خواندن نیست")
+                    val lines = csvText.removePrefix("\uFEFF").split(Regex("\\r?\\n")).filter { it.isNotBlank() }
+                    var imported = 0
+                    db.writableDatabase.beginTransaction()
+                    try {
+                        for (line in lines.drop(1)) {
+                            val row = parseCsvLine(line)
+                            if (row.size < 7) continue
+                            val values = ContentValues().apply {
+                                put("date", row.getOrElse(0) { "" })
+                                put("fullname", row.getOrElse(1) { "" })
+                                put("phone", row.getOrElse(2) { "" })
+                                put("referrer", row.getOrElse(3) { "" })
+                                put("initial_weight", row.getOrElse(4) { "" })
+                                put("weight", row.getOrElse(4) { "" })
+                                put("product_type", row.getOrElse(5) { "" })
+                                put("loadtype", row.getOrElse(5) { "" })
+                                put("product_kil", row.getOrElse(6) { "" })
+                                put("kilometer", row.getOrElse(6) { "" })
+                                put("price", row.getOrElse(7) { "" })
+                                put("description", if (row.getOrElse(3) { "" }.isBlank()) "" else "معرف قبلی: " + row[3])
+                            }
+                            if (values.getAsString("fullname").isNullOrBlank()) continue
+                            db.writableDatabase.insert("records", null, values)
+                            imported++
+                        }
+                        db.writableDatabase.setTransactionSuccessful()
+                    } finally {
+                        db.writableDatabase.endTransaction()
+                    }
+                    Toast.makeText(this, "$imported سابقه وارد شد", Toast.LENGTH_LONG).show()
+                    home()
                 }
                 102 -> {
                     val temp = java.io.File(cacheDir, "baharloo-restore.db")
