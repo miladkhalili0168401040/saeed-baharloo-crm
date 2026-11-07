@@ -124,50 +124,55 @@ class MainActivity : Activity() {
     }
 
     private fun label(value: String) {
-        val card = TextView(this).apply {
-            text = value
-            textSize = 15f
-            setTextColor(INK)
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
-            setPadding(16, 14, 16, 14)
-            background = rounded(Color.WHITE, 16f, 0xFFE6DFC9.toInt())
+        val line = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(2, 12, 2, 6)
         }
-        val lp = LinearLayout.LayoutParams(-1, -2)
-        lp.bottomMargin = 8
-        root.addView(card, lp)
+        line.addView(View(this).apply {
+            background = rounded(GOLD, 4f)
+        }, LinearLayout.LayoutParams(4, 22))
+        line.addView(TextView(this).apply {
+            text = value
+            textSize = 14f
+            setTextColor(GREEN)
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER_VERTICAL or Gravity.RIGHT
+            setPadding(10, 0, 0, 0)
+        })
+        root.addView(line, LinearLayout.LayoutParams(-1, -2))
     }
 
     private fun button(value: String, action: () -> Unit) {
+        val primary = value.contains("ذخیره") || value.contains("اعمال فیلتر")
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(18, 15, 18, 15)
-            background = rounded(Color.WHITE, 17f, 0xFFE3D9BE.toInt())
+            setPadding(18, 17, 18, 17)
+            background = rounded(if (primary) GREEN else Color.WHITE, 18f,
+                if (primary) GOLD else 0xFFE3D9BE.toInt())
+            elevation = 2f
             isClickable = true
             isFocusable = true
             setOnClickListener { action() }
         }
-        val marker = TextView(this).apply {
-            text = "◆"
-            textSize = 15f
+        card.addView(TextView(this).apply {
+            text = if (primary) "✓" else "◆"
+            textSize = 17f
             setTextColor(GOLD)
             gravity = Gravity.CENTER
-        }
-        card.addView(marker, LinearLayout.LayoutParams(30, -2))
+        }, LinearLayout.LayoutParams(30, -2))
         card.addView(TextView(this).apply {
             text = value
-            textSize = 16f
-            setTextColor(GREEN)
+            textSize = 15f
+            setTextColor(if (primary) CREAM else GREEN)
             typeface = Typeface.DEFAULT_BOLD
         }, LinearLayout.LayoutParams(0, -2, 1f))
-        card.addView(TextView(this).apply {
-            text = "‹"
-            textSize = 25f
-            setTextColor(GOLD)
+        if (!primary) card.addView(TextView(this).apply {
+            text = "‹"; textSize = 24f; setTextColor(GOLD)
         })
         val lp = LinearLayout.LayoutParams(-1, -2)
-        lp.bottomMargin = 10
+        lp.bottomMargin = 11
         root.addView(card, lp)
     }
 
@@ -179,8 +184,9 @@ class MainActivity : Activity() {
             setTextColor(INK)
             setHintTextColor(0xFF9A9A90.toInt())
             setSingleLine(hint != "توضیحات")
-            setPadding(14, 12, 14, 12)
-            background = rounded(Color.WHITE, 14f, 0xFFE3D9BE.toInt())
+            setPadding(16, 14, 16, 14)
+            background = rounded(Color.WHITE, 13f, 0xFFD9D0B9.toInt())
+            elevation = 1.5f
             if (numeric) inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
         val lp = LinearLayout.LayoutParams(-1, -2)
@@ -210,19 +216,20 @@ class MainActivity : Activity() {
 
         val stats = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(14, 14, 14, 14)
-            background = rounded(0xFFE9E5D8.toInt(), 20f)
+            setPadding(18, 18, 18, 18)
+            background = rounded(GREEN, 22f, GOLD)
+            elevation = 3f
         }
         fun statLine(caption: String, value: String) {
             stats.addView(TextView(this).apply {
                 text = caption
                 textSize = 13f
-                setTextColor(0xFF647066.toInt())
+                setTextColor(0xFFE7DCC2.toInt())
             })
             stats.addView(TextView(this).apply {
                 text = value
                 textSize = 23f
-                setTextColor(GREEN)
+                setTextColor(CREAM)
                 typeface = Typeface.DEFAULT_BOLD
                 setPadding(0, 2, 0, 12)
             })
@@ -405,20 +412,51 @@ class MainActivity : Activity() {
             val details = labels.indices.joinToString("\n") { i ->
                 labels[i] + ": " + (cursor.getString(cursor.getColumnIndexOrThrow(keys[i])) ?: "")
             }
-            root.addView(TextView(this).apply {
-                text = details
-                textSize = 15f
-                setTextColor(INK)
-                setPadding(14, 14, 14, 14)
-                setBackgroundColor(Color.WHITE)
+            val recordCard = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(16, 16, 16, 12)
+                background = rounded(Color.WHITE, 18f, 0xFFE1D8C2.toInt())
+                elevation = 2f
+            }
+            recordCard.addView(TextView(this).apply {
+                text = "پرونده  #$id"
+                textSize = 12f
+                setTextColor(GOLD)
+                typeface = Typeface.DEFAULT_BOLD
             })
-            val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            actions.addView(Button(this).apply {
-                text = "ویرایش"
+            recordCard.addView(TextView(this).apply {
+                text = details
+                textSize = 14f
+                setTextColor(INK)
+                setLineSpacing(5f, 1f)
+                setPadding(0, 10, 0, 12)
+            })
+            root.addView(recordCard)
+            val actions = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                setPadding(0, 6, 0, 12)
+            }
+            actions.addView(TextView(this).apply {
+                text = "✎  ویرایش"
+                gravity = Gravity.CENTER
+                textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(GREEN)
+                setPadding(12, 12, 12, 12)
+                background = rounded(0xFFE8EBDD.toInt(), 12f)
+                isClickable = true
                 setOnClickListener { form(id) }
             }, LinearLayout.LayoutParams(0, -2, 1f))
-            actions.addView(Button(this).apply {
-                text = "حذف"
+            actions.addView(TextView(this).apply {
+                text = "⌫  حذف"
+                gravity = Gravity.CENTER
+                textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(0xFF9B4540.toInt())
+                setPadding(12, 12, 12, 12)
+                background = rounded(0xFFF5E7E3.toInt(), 12f)
+                isClickable = true
                 setOnClickListener {
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle("حذف سابقه")
@@ -431,8 +469,8 @@ class MainActivity : Activity() {
                 }
             }, LinearLayout.LayoutParams(0, -2, 1f))
             root.addView(actions)
-            root.addView(View(this).apply { setBackgroundColor(GOLD) },
-                LinearLayout.LayoutParams(-1, 2))
+            val gap = LinearLayout.LayoutParams(-1, 8)
+            root.addView(View(this).apply { setBackgroundColor(CREAM) }, gap)
         }
         cursor.close()
         button("بازگشت به صفحه اصلی") { home() }
