@@ -277,7 +277,7 @@ class MainActivity : Activity() {
         val wlp=LinearLayout.LayoutParams(-1,-2); wlp.bottomMargin=18; root.addView(welcome,wlp)
         sectionTitle("عملیات اصلی","دسترسی سریع به بخش‌های پرکاربرد")
         dashboardPair(Triple("ثبت اطلاعات","ایجاد پرونده جدید",{form()}),Triple("جستجوی پیشرفته","فیلتر و یافتن سوابق",{advancedSearch()}),"＋","⌕",true)
-        dashboardPair(Triple("مشاهده سوابق","بررسی و ویرایش پرونده‌ها",{showRecords(null)}),Triple("خروجی اطلاعات","دریافت فایل CSV",{export()}),"▤","⇩")
+        dashboardPair(Triple("مشاهده سوابق","بررسی و ویرایش پرونده‌ها",{showRecords(null)}),Triple("خروجی اطلاعات","فایل CSV سازگار با Excel",{export()}),"▤","⇩")
         sectionTitle("ابزارهای مدیریتی","انتقال و نگهداری امن اطلاعات")
         button("انتقال اطلاعات از نسخه قبلی"){importLegacyCsv()}
         button("پشتیبان‌گیری از اطلاعات"){backup()}
@@ -371,16 +371,19 @@ class MainActivity : Activity() {
             NumberPicker(this).apply { this.minValue = min; this.maxValue = max; this.value = value.coerceIn(min, max); wrapSelectorWheel = false }
         val py = picker(year, 1300, 1500)
         val pm = picker(month, 1, 12)
-        val pd = picker(day, 1, 31)
+        fun jalaliMonthDays(y: Int, m: Int): Int =
+            if (m <= 6) 31 else if (m <= 11) 30 else if (isLeapJalali(y)) 30 else 29
+        val pd = picker(day.coerceAtMost(jalaliMonthDays(py.value, pm.value)), 1, jalaliMonthDays(py.value, pm.value))
         box.addView(py, LinearLayout.LayoutParams(0, -2, 1f))
         box.addView(pm, LinearLayout.LayoutParams(0, -2, 1f))
         box.addView(pd, LinearLayout.LayoutParams(0, -2, 1f))
-        pm.setOnValueChangedListener { _, _, newMonth ->
-            pd.maxValue = if (newMonth <= 6) 31 else if (newMonth <= 11) 30 else if (isLeapJalali(py.value)) 30 else 29
+        fun refreshDayLimit() {
+            val maxDay = jalaliMonthDays(py.value, pm.value)
+            pd.maxValue = maxDay
+            if (pd.value > maxDay) pd.value = maxDay
         }
-        py.setOnValueChangedListener { _, _, _ ->
-            if (pm.value == 12) pd.maxValue = if (isLeapJalali(py.value)) 30 else 29
-        }
+        pm.setOnValueChangedListener { _, _, _ -> refreshDayLimit() }
+        py.setOnValueChangedListener { _, _, _ -> refreshDayLimit() }
         AlertDialog.Builder(this)
             .setTitle("انتخاب تاریخ شمسی")
             .setView(box)
