@@ -96,7 +96,7 @@ class MainActivity : Activity() {
     private fun setup(title: String) {
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(18, 18, 18, 28)
+            setPadding(14, 14, 14, 28)
             layoutDirection = View.LAYOUT_DIRECTION_RTL
             setBackgroundColor(CREAM)
         }
@@ -147,7 +147,7 @@ class MainActivity : Activity() {
         val line = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(2, 12, 2, 6)
+            setPadding(2, 15, 2, 7)
         }
         line.addView(View(this).apply {
             background = rounded(GOLD, 4f)
@@ -208,9 +208,9 @@ class MainActivity : Activity() {
             setTextColor(INK)
             setHintTextColor(0xFF9A9A90.toInt())
             setSingleLine(hint != "توضیحات")
-            setPadding(16, 14, 16, 14)
-            background = rounded(Color.WHITE, 15f, 0xFFE2D8C3.toInt())
-            elevation = 2f
+            setPadding(17, 16, 17, 16)
+            background = rounded(Color.WHITE, 17f, 0xFFD9D0BA.toInt())
+            elevation = 1.5f
             if (numeric) inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
         val lp = LinearLayout.LayoutParams(-1, -2)
@@ -300,7 +300,10 @@ class MainActivity : Activity() {
 
         setup(if (recordId == null) "ثبت اطلاعات جدید" else "ویرایش سابقه")
         fields.clear()
+        sectionTitle("مشخصات پرونده", "اطلاعات شناسایی و پیگیری محموله")
         labels.forEachIndexed { i, name ->
+            if (i == 3) sectionTitle("اطلاعات محصول", "وزن‌ها و مشخصات محصول")
+            if (i == 7) sectionTitle("اطلاعات تماس و توضیحات", "راه ارتباطی و نکات تکمیلی")
             label(name)
             val e = input(name, i == 3 || i == 4 || i == 6, oldValues[i])
             if (i == 1) {
@@ -406,14 +409,17 @@ class MainActivity : Activity() {
 
     private fun advancedSearch() {
         setup("جستجوی پیشرفته")
+        sectionTitle("محدوده زمانی", "سوابق را بر اساس تاریخ شمسی محدود کنید")
         label("از تاریخ (سال/ماه/روز)")
         val fromDate = input("مثلاً 1405/01/01")
         label("تا تاریخ (سال/ماه/روز)")
         val toDate = input("مثلاً 1405/01/31")
+        sectionTitle("محدوده محصول", "فیلتر بر اساس مقدار کیل")
         label("از مقدار کیل محصول")
         val fromKilo = input("حداقل مقدار", true)
         label("تا مقدار کیل محصول")
         val toKilo = input("حداکثر مقدار", true)
+        sectionTitle("مشخصات مشتری", "جستجو با نام خانوادگی")
         label("نام خانوادگی مشتری")
         val surname = input("نام خانوادگی")
         button("اعمال فیلترها") {
@@ -446,7 +452,7 @@ class MainActivity : Activity() {
                 elevation = 2f
             }
             recordCard.addView(TextView(this).apply {
-                text = "پرونده  #$id"
+                text = "پرونده  #$id   •   " + (cursor.getString(cursor.getColumnIndexOrThrow("fullname")) ?: "بدون نام")
                 textSize = 12f
                 setTextColor(GOLD)
                 typeface = Typeface.DEFAULT_BOLD
