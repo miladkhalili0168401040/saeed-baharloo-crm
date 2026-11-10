@@ -422,9 +422,11 @@ class MainActivity : Activity() {
         val fromKilo = input("حداقل مقدار", true)
         label("تا مقدار کیل محصول")
         val toKilo = input("حداکثر مقدار", true)
-        sectionTitle("مشخصات مشتری", "جستجو با نام خانوادگی")
+        sectionTitle("مشخصات مشتری و محموله", "جستجو با نام خانوادگی یا کد لجستیک")
         label("نام خانوادگی مشتری")
         val surname = input("نام خانوادگی")
+        label("کد لجستیک")
+        val logisticCode = input("کد لجستیک یا بخشی از آن")
         button("اعمال فیلترها") {
             val conditions = mutableListOf<String>()
             val args = mutableListOf<String>()
@@ -433,6 +435,7 @@ class MainActivity : Activity() {
             if (fromKilo.text.isNotBlank()) { conditions.add("CAST(REPLACE(product_kil, ',', '.') AS REAL) >= ?"); args.add(fromKilo.text.toString()) }
             if (toKilo.text.isNotBlank()) { conditions.add("CAST(REPLACE(product_kil, ',', '.') AS REAL) <= ?"); args.add(toKilo.text.toString()) }
             if (surname.text.isNotBlank()) { conditions.add("fullname LIKE ?"); args.add("%" + surname.text.toString().trim() + "%") }
+            if (logisticCode.text.isNotBlank()) { conditions.add("logistic_code LIKE ?"); args.add("%" + logisticCode.text.toString().trim() + "%") }
             showRecords(if (conditions.isEmpty()) null else conditions.joinToString(" AND "), args.toTypedArray())
         }
         button("بازگشت") { home() }
